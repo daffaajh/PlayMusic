@@ -15,22 +15,35 @@ struct HomeView: View {
         ZStack {
             Color(UIColor.systemBackground).ignoresSafeArea()
 
-            VStack(spacing: 14) {
-                HStack {
-                    Text("PlayMusic")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.primary)
+            VStack(spacing: 0) {
+                // Top Header: Sleek, high-contrast, pure native
+                HStack(alignment: .lastTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("LIBRARY")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .tracking(1.5)
+                        Text("PlayMusic")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundColor(.primary)
+                    }
                     Spacer()
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 12)
+                .padding(.top, 14)
+                .padding(.bottom, 12)
 
+                // Search Bar: Minimalist pill with crisp border & glass backdrop
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass")
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.secondary)
                     
-                    TextField("Search songs, artists...", text: $searchQuery)
+                    TextField("Lagu, artis, atau album...", text: $searchQuery)
+                        .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.primary)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
                         .onSubmit {
                             performSearch(query: searchQuery)
                         }
@@ -41,15 +54,25 @@ struct HomeView: View {
                             searchResults = []
                         }) {
                             Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .liquidGlass(cornerRadius: 20, allowsDragPhysics: false)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(UIColor.secondarySystemBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                )
                 .padding(.horizontal, 20)
+                .padding(.bottom, 12)
 
+                // Genre Filter Chips: Apple Music style pills
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(genres, id: \.self) { genre in
@@ -57,57 +80,83 @@ struct HomeView: View {
                             Button(action: {
                                 selectedGenre = genre == "All" ? nil : genre
                                 if let g = selectedGenre {
-                                    performSearch(query: "\(g) music hits")
+                                    performSearch(query: "\(g) hits")
                                 } else {
                                     searchQuery = ""
                                     searchResults = []
                                 }
                             }) {
                                 Text(genre)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13, weight: isCurrent ? .bold : .medium, design: .rounded))
                                     .foregroundColor(isCurrent ? .white : .primary)
                                     .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
+                                    .padding(.vertical, 7)
                                     .background(
                                         Capsule()
-                                            .fill(isCurrent ? Color.blue : Color.secondary.opacity(0.12))
+                                            .fill(isCurrent ? Color.primary : Color(UIColor.secondarySystemBackground))
                                     )
+                                    .colorInvert(isCurrent ? true : false)
                             }
                         }
                     }
                     .padding(.horizontal, 20)
                 }
+                .padding(.bottom, 8)
 
+                // Content List
                 if isSearching || (isLoadingTrending && searchResults.isEmpty && searchQuery.isEmpty) {
                     Spacer()
-                    ProgressView()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.1)
+                        Text("Memuat lagu...")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                     Spacer()
                 } else {
-                    List {
-                        let displaySongs = searchQuery.isEmpty ? trendingSongs : searchResults
-                        
-                        if searchQuery.isEmpty && !trendingSongs.isEmpty {
-                            Text("Trending Now")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.primary)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .padding(.top, 4)
+                    let displaySongs = searchQuery.isEmpty ? trendingSongs : searchResults
+
+                    if displaySongs.isEmpty {
+                        Spacer()
+                        VStack(spacing: 10) {
+                            Image(systemName: "music.note.slash")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary.opacity(0.5))
+                            Text("Tidak ada lagu ditemukan")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.secondary)
                         }
-                        
-                        ForEach(displaySongs) { song in
-                            SongRow(song: song)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    player.play(song: song)
+                        Spacer()
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            LazyVStack(spacing: 4) {
+                                HStack {
+                                    Text(searchQuery.isEmpty ? "Rekomendasi Teratas" : "Hasil Pencarian")
+                                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text("\(displaySongs.count) lagu")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
                                 }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 8)
+                                .padding(.bottom, 6)
+
+                                ForEach(displaySongs) { song in
+                                    SongRow(song: song)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            player.play(song: song)
+                                        }
+                                }
+                            }
+                            .padding(.bottom, 120) // Space for floating tab & player
                         }
-                    }
-                    .listStyle(.plain)
-                    .refreshable {
-                        loadTrending()
+                        .refreshable {
+                            loadTrending()
+                        }
                     }
                 }
             }
@@ -159,27 +208,44 @@ struct SongRow: View {
     let song: Song
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             AsyncImage(url: song.highResThumbnail) { phase in
                 if let image = phase.image {
                     image.resizable().scaledToFill()
                 } else {
-                    Color.white.opacity(0.08)
+                    ZStack {
+                        Color(UIColor.secondarySystemBackground)
+                        Image(systemName: "music.note")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
-            .frame(width: 52, height: 52)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(song.title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                 
-                Text(song.artist)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(song.artist)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    
+                    if let album = song.album {
+                        Text("•")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        Text(album)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(.secondary.opacity(0.8))
+                            .lineLimit(1)
+                    }
+                }
             }
 
             Spacer()
@@ -189,29 +255,29 @@ struct SongRow: View {
                     FavoritesManager.shared.toggleFavorite(song: song)
                 }) {
                     Label(
-                        FavoritesManager.shared.isFavorite(songId: song.id) ? "Remove Favorite" : "Add to Favorite",
+                        FavoritesManager.shared.isFavorite(songId: song.id) ? "Hapus dari Favorit" : "Tambah ke Favorit",
                         systemImage: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.slash" : "heart"
                     )
                 }
                 Button(action: {
                     AudioPlayerManager.shared.playNext(song)
                 }) {
-                    Label("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward")
+                    Label("Putar Berikutnya", systemImage: "text.line.first.and.arrowtriangle.forward")
                 }
                 Button(action: {
                     AudioPlayerManager.shared.addToQueue(song)
                 }) {
-                    Label("Add to Queue", systemImage: "text.badge.plus")
+                    Label("Tambah ke Antrean", systemImage: "text.badge.plus")
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .foregroundColor(.secondary)
-                    .frame(width: 32, height: 32)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .liquidGlass(cornerRadius: 18, allowsDragPhysics: false)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 6)
     }
 }

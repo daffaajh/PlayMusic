@@ -60,25 +60,34 @@ final class InnertubeService {
         ])
         
         var songs: [Song] = []
-        guard let contents = json["contents"] as? [String: Any],
-              let sectionList = contents["sectionListRenderer"] as? [String: Any],
-              let subContents = sectionList["contents"] as? [[String: Any]] else {
-            return []
-        }
+        var seenIds = Set<String>()
+        extractSongsRecursively(from: json, into: &songs, seenIds: &seenIds)
         
-        for item in subContents {
-            guard let shelf = (item["musicShelfRenderer"] ?? item["musicCardShelfRenderer"]) as? [String: Any],
-                  let shelfContents = shelf["contents"] as? [[String: Any]] else { continue }
-            
-            for content in shelfContents {
-                guard let itemRenderer = content["musicResponsiveListItemRenderer"] as? [String: Any] else { continue }
-                if let song = parseSongItem(itemRenderer) {
-                    songs.append(song)
-                }
-            }
+        // Fallback pencarian tanpa filter params jika hasil kosong
+        if songs.isEmpty {
+            let fallbackJson = try await post(endpoint: "search", body: ["query": query])
+            extractSongsRecursively(from: fallbackJson, into: &songs, seenIds: &seenIds)
         }
         
         return songs
+    }
+
+    private func extractSongsRecursively(from node: Any, into results: inout [Song], seenIds: inout Set<String>) {
+        if let dict = node as? [String: Any] {
+            if let item = dict["musicResponsiveListItemRenderer"] as? [String: Any] {
+                if let song = parseSongItem(item), !seenIds.contains(song.id) {
+                    seenIds.insert(song.id)
+                    results.append(song)
+                }
+            }
+            for value in dict.values {
+                extractSongsRecursively(from: value, into: &results, seenIds: &seenIds)
+            }
+        } else if let array = node as? [Any] {
+            for element in array {
+                extractSongsRecursively(from: element, into: &results, seenIds: &seenIds)
+            }
+        }
     }
     
     private func parseSongItem(_ item: [String: Any]) -> Song? {
@@ -87,18 +96,42 @@ final class InnertubeService {
         
         let titleColumn = flexColumns[0]["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
         let titleRuns = (titleColumn?["text"] as? [String: Any])?["runs"] as? [[String: Any]]
-        let title = titleRuns?.first?["text"] as? String ?? "Unknown Title"
+        guard let title = titleRuns?.first?["text"] as? String, !title.isEmpty else { return nil }
         
         let artistColumn = flexColumns[1]["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
         let artistRuns = (artistColumn?["text"] as? [String: Any])?["runs"] as? [[String: Any]]
-        let artist = artistRuns?.first?["text"] as? String ?? "Unknown Artist"
-        let album = artistRuns?.count ?? 0 > 2 ? artistRuns?[2]["text"] as? String : nil
         
-        let navEndpoint = titleRuns?.first?["navigationEndpoint"] as? [String: Any]
-        let watchEndpoint = navEndpoint?["watchEndpoint"] as? [String: Any]
-        let videoId = watchEndpoint?["videoId"] as? String ?? (item["playlistItemData"] as? [String: Any])?["videoId"] as? String
+        var artist = "Unknown Artist"
+        var album: String? = nil
         
-        guard let id = videoId else { return nil }
+        if let runs = artistRuns {
+            let textRuns = runs.compactMap { $0["text"] as? String }.filter { $0 != " • " && $0 != "•" }
+            if let first = textRuns.first {
+                artist = first
+            }
+            if textRuns.count > 1 {
+                album = textRuns[1]
+            }
+        }
+        
+        // Cari videoId dari watchEndpoint atau playlistItemData
+        var videoId: String? = (item["playlistItemData"] as? [String: Any])?["videoId"] as? String
+        
+        if videoId == nil {
+            let navEndpoint = titleRuns?.first?["navigationEndpoint"] as? [String: Any]
+            videoId = (navEndpoint?["watchEndpoint"] as? [String: Any])?["videoId"] as? String
+        }
+        
+        if videoId == nil {
+            // Cek overlay button play
+            if let overlay = (item["overlay"] as? [String: Any])?["musicItemThumbnailOverlayRenderer"] as? [String: Any],
+               let playBtn = (overlay["content"] as? [String: Any])?["musicPlayButtonRenderer"] as? [String: Any],
+               let playNav = playBtn["playNavigationEndpoint"] as? [String: Any] {
+                videoId = (playNav["watchEndpoint"] as? [String: Any])?["videoId"] as? String
+            }
+        }
+        
+        guard let id = videoId, !id.isEmpty else { return nil }
         
         var thumbURL: String?
         if let thumbRenderer = (item["thumbnail"] as? [String: Any])?["musicThumbnailRenderer"] as? [String: Any],
