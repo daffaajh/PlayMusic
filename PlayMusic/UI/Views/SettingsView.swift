@@ -48,53 +48,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    // Sleep Timer
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("SLEEP TIMER")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .tracking(1.2)
-
-                        if SleepTimerManager.shared.isTimerActive {
-                            HStack {
-                                Image(systemName: "timer")
-                                    .foregroundColor(Color.blue)
-                                Text("Musik berhenti dalam \(SleepTimerManager.shared.formattedTime)")
-                                    .font(.system(size: 14, weight: .medium, design: .rounded))
-                                Spacer()
-                                Button("Batalkan") {
-                                    SleepTimerManager.shared.cancelTimer()
-                                }
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.red)
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Color(UIColor.secondarySystemBackground))
-                            )
-                        } else {
-                            HStack(spacing: 8) {
-                                ForEach([15, 30, 45, 60], id: \.self) { minutes in
-                                    Button(action: {
-                                        SleepTimerManager.shared.startTimer(minutes: minutes)
-                                    }) {
-                                        Text("\(minutes)m")
-                                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.primary)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 11)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                    .fill(Color(UIColor.secondarySystemBackground))
-                                            )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     // Audio Quality
                     VStack(alignment: .leading, spacing: 10) {
                         Text("KUALITAS AUDIO")

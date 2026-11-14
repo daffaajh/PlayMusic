@@ -4,6 +4,7 @@ struct FullPlayerView: View {
     @ObservedObject var player = AudioPlayerManager.shared
     @Environment(\.dismiss) var dismiss
     @State private var showLyrics: Bool = true
+    @State private var showQueueSheet: Bool = false
     @Environment(\.verticalSizeClass) var verticalSizeClass
 
     var isLandscape: Bool {
@@ -31,6 +32,9 @@ struct FullPlayerView: View {
             } else {
                 portraitLayout
             }
+        }
+        .sheet(isPresented: $showQueueSheet) {
+            QueueSheetView()
         }
     }
 
@@ -205,18 +209,23 @@ struct FullPlayerView: View {
                             .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundColor(.white.opacity(0.85))
                             .lineSpacing(10)
-                    } else {
-                        VStack(spacing: 8) {
-                            Image(systemName: "music.mic")
-                                .font(.system(size: 32))
-                                .foregroundColor(.white.opacity(0.3))
-                            Text("Lirik tidak tersedia")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white.opacity(0.4))
-                        }
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 60)
-                    }
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "music.mic")
+                        .font(.system(size: 40))
+                        .foregroundColor(.white.opacity(0.3))
+                    Text("Lirik lagu tidak tersedia")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
+                    Text("Lirik untuk lagu ini belum tersedia di basis data lirik.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.35))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.top, 60)
+            }
                 }
                 .padding(.horizontal, 32)
                 .padding(.vertical, 40)
@@ -311,13 +320,29 @@ struct FullPlayerView: View {
             }
             .padding(.top, 8)
 
-            // Bar AirPlay Bersih Tanpa Ikon Speaker Samping
+            // Bar AirPlay & Tombol Antrean (Queue)
             HStack {
+                Button(action: {
+                    showQueueSheet = true
+                }) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.75))
+                        .padding(8)
+                        .background(Circle().fill(Color.white.opacity(0.12)))
+                }
+
                 Spacer()
+
                 AirPlayButtonView()
                     .frame(width: 32, height: 32)
+
                 Spacer()
+
+                Color.clear
+                    .frame(width: 34, height: 34)
             }
+            .padding(.horizontal, 28)
             .padding(.top, 10)
         }
     }

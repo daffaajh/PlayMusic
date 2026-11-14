@@ -146,13 +146,20 @@ final class AudioPlayerManager: ObservableObject {
     }
     
     func play(song: Song) {
+        // Mencegah lagu berhenti dan mulai dari ulang jika user menekan lagu yang sama
+        if let current = self.currentSong, current.id == song.id {
+            if !isPlaying {
+                togglePlayPause()
+            }
+            return
+        }
+
         self.currentSong = song
         self.isPlaying = false
         self.currentTime = 0
         self.lyrics = nil
         self.currentLyricIndex = nil
         
-        // Putar audio melalui WebKit IFrame engine (100% anti 403 & bypass throttling)
         HiddenAudioWebViewManager.shared.loadAndPlay(videoId: song.id)
         self.isPlaying = true
         setupNowPlayingInfo(song: song)
