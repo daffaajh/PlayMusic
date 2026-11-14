@@ -2,12 +2,12 @@ name: PlayMusic
 options:
   bundleIdPrefix: com.dapa.playmusic
   deploymentTarget:
-    iOS: "13.0"
+    iOS: "15.0"
 targets:
   PlayMusic:
     type: application
     platform: iOS
-    deploymentTarget: "13.0"
+    deploymentTarget: "15.0"
     sources:
       - path: PlayMusic
     settings:

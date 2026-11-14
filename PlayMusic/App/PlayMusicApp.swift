@@ -6,13 +6,8 @@ struct PlayMusicApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if #available(iOS 15.0, *) {
-                MainView()
-                    .preferredColorScheme(themeManager.selectedTheme.colorScheme)
-            } else {
-                UnsupportedOSView()
-                    .preferredColorScheme(.dark)
-            }
+            MainView()
+                .preferredColorScheme(themeManager.selectedTheme.colorScheme)
         }
     }
 }
