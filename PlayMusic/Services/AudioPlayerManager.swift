@@ -85,9 +85,9 @@ final class AudioPlayerManager: ObservableObject {
     }
 
     func playNextInQueue() {
-        if repeatMode == .one, let song = currentSong {
+        if repeatMode == .one, currentSong != nil {
             seek(to: 0)
-            player?.play()
+            activePlayer?.play()
             isPlaying = true
             return
         }

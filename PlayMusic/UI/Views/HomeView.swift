@@ -52,7 +52,6 @@ struct HomeView: View {
                                         Capsule()
                                             .fill(isCurrent ? Color.primary : Color(UIColor.secondarySystemBackground))
                                     )
-                                    .colorInvert(isCurrent ? true : false)
                             }
                         }
                     }
@@ -160,24 +159,6 @@ struct HomeView: View {
                 await MainActor.run {
                     self.trendingSongs = combined
                     self.isLoadingTrending = false
-                }
-            }
-        }
-    }
-
-    private func performSearch(query: String) {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        isSearching = true
-        Task {
-            do {
-                let results = try await InnertubeService.shared.search(query: query)
-                await MainActor.run {
-                    self.searchResults = results
-                    self.isSearching = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.isSearching = false
                 }
             }
         }
