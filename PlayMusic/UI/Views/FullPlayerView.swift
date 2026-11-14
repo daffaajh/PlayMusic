@@ -235,18 +235,20 @@ struct FullPlayerView: View {
 
     private var metaAndControlsSection: some View {
         VStack(spacing: 20) {
-            VStack(spacing: 6) {
-                Text(song.title)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                Text(song.artist)
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
-                    .foregroundColor(.white.opacity(0.75))
-                    .lineLimit(1)
+            if let song = player.currentSong {
+                VStack(spacing: 6) {
+                    Text(song.title)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(1)
+                    Text(song.artist)
+                        .font(.system(size: 17, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.75))
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 28)
+                .padding(.top, 10)
             }
-            .padding(.horizontal, 28)
-            .padding(.top, 10)
 
             VStack(spacing: 8) {
                 Slider(value: Binding(

@@ -270,23 +270,6 @@ final class AudioPlayerManager: ObservableObject {
         }
     }
     
-    func togglePlayPause() {
-        guard let player = activePlayer else { return }
-        if isPlaying {
-            player.pause()
-            isPlaying = false
-        } else {
-            player.play()
-            isPlaying = true
-        }
-        updateNowPlayingCenter()
-    }
-    
-    func seek(to seconds: Double) {
-        let time = CMTime(seconds: seconds, preferredTimescale: 600)
-        activePlayer?.seek(to: time)
-    }
-    
     private func updateActiveLyric() {
         guard let lyrics = lyrics, lyrics.isSynced else { return }
         let currentMs = Int(currentTime * 1000)
