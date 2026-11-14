@@ -307,7 +307,7 @@ final class AudioPlayerManager: ObservableObject {
             do {
                 let streamURL = try await streamURLTask
                 startPlayback(url: streamURL, song: nextSong, isCrossfadeTransition: true)
-                AudioCacheService.shared.saveToCache(remoteURL: streamURL, for: nextSong.id)
+                AudioCacheService.shared.saveToCache(remoteURL: streamURL, for: nextSong)
             } catch {
                 print("Failed to stream next song in automix: \(error)")
             }
