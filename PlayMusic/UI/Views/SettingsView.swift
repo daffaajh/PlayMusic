@@ -124,61 +124,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    // Crossfade & Automix Section (Apple Music Style)
-                    VStack(alignment: .leading, spacing: 14) {
-                        Text("AUDIO PLAYBACK & AUTOMIX")
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundColor(.secondary)
-                            .tracking(1.2)
-
-                        VStack(spacing: 16) {
-                            // Crossfade Slider
-                            VStack(alignment: .leading, spacing: 6) {
-                                HStack {
-                                    Text("Crossfade")
-                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Text(AudioPlayerManager.shared.crossfadeDuration == 0 ? "Mati" : "\(Int(AudioPlayerManager.shared.crossfadeDuration)) dtk")
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                                        .foregroundColor(AudioPlayerManager.shared.crossfadeDuration > 0 ? .blue : .secondary)
-                                }
-
-                                Slider(
-                                    value: Binding(
-                                        get: { AudioPlayerManager.shared.crossfadeDuration },
-                                        set: { AudioPlayerManager.shared.setCrossfade(seconds: $0) }
-                                    ),
-                                    in: 0...12,
-                                    step: 1
-                                )
-                                .accentColor(.blue)
-                            }
-
-                            Divider()
-
-                            // Automix Toggle
-                            Toggle(isOn: Binding(
-                                get: { AudioPlayerManager.shared.isAutomixEnabled },
-                                set: { _ in AudioPlayerManager.shared.toggleAutomix() }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Automix Cerdas")
-                                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                    Text("Menghubungkan outro dan intro lagu tanpa henti layaknya DJ")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                        .padding(16)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(UIColor.secondarySystemBackground))
-                        )
-                    }
-
                     // Storage & Cache
                     VStack(alignment: .leading, spacing: 10) {
                         Text("PENYIMPANAN")

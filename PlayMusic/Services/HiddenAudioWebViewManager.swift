@@ -32,6 +32,10 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
         guard let body = message.body as? [String: Any] else { return }
         
         DispatchQueue.main.async {
+            if let evt = body["event"] as? String, evt == "ended" {
+                AudioPlayerManager.shared.playNextInQueue()
+                return
+            }
             if let state = body["state"] as? Int {
                 // 1 = playing, 2 = paused
                 self.isPlaying = (state == 1)
@@ -78,14 +82,21 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
                 }
                 function onPlayerReady(event) {
                     event.target.playVideo();
-                    setInterval(updateProgress, 300);
+                    setInterval(updateProgress, 250);
                 }
                 function onPlayerStateChange(event) {
-                    window.webkit.messageHandlers.playbackUpdate.postMessage({
-                        state: event.data,
-                        currentTime: player.getCurrentTime() || 0,
-                        duration: player.getDuration() || 1
-                    });
+                    if (event.data === 0) {
+                        // 0 = ENDED -> Otomatis putar lagu berikutnya di antrean
+                        window.webkit.messageHandlers.playbackUpdate.postMessage({
+                            event: "ended"
+                        });
+                    } else {
+                        window.webkit.messageHandlers.playbackUpdate.postMessage({
+                            state: event.data,
+                            currentTime: player.getCurrentTime() || 0,
+                            duration: player.getDuration() || 1
+                        });
+                    }
                 }
                 function updateProgress() {
                     if (player && typeof player.getCurrentTime === 'function') {

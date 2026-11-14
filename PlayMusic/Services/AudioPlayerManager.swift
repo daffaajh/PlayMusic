@@ -47,14 +47,18 @@ final class AudioPlayerManager: ObservableObject {
         }
     }
 
-    func setCrossfade(seconds: Double) {
-        crossfadeDuration = seconds
-        UserDefaults.standard.set(seconds, forKey: "crossfade_seconds")
+    func playNextTrack() {
+        guard !queue.isEmpty else { return }
+        let nextSong = queue.removeFirst()
+        play(song: nextSong)
     }
 
-    func toggleAutomix() {
-        isAutomixEnabled.toggle()
-        UserDefaults.standard.set(isAutomixEnabled, forKey: "automix_enabled")
+    func playPreviousTrack() {
+        if currentTime > 3 {
+            seek(to: 0)
+        } else {
+            seek(to: 0)
+        }
     }
 
     func addToQueue(_ song: Song) {

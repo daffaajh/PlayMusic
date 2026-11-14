@@ -32,6 +32,15 @@ struct MiniPlayerView: View {
                 Spacer()
 
                 Button(action: {
+                    FavoritesManager.shared.toggleFavorite(song: song)
+                }) {
+                    Image(systemName: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.fill" : "heart")
+                        .font(.system(size: 17))
+                        .foregroundColor(FavoritesManager.shared.isFavorite(songId: song.id) ? .red : .secondary)
+                        .frame(width: 32, height: 32)
+                }
+
+                Button(action: {
                     player.togglePlayPause()
                 }) {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")

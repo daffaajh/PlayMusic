@@ -95,14 +95,14 @@ struct FullPlayerView: View {
     }
 
     private var portraitLayout: some View {
-        VStack(spacing: 20) {
-            // Top Bar: Dismiss Grabber & Back Button
+        VStack(spacing: 16) {
+            // Header atas yang tetap ada (TIDAK AKAN HILANG saat lirik di-toggle)
             HStack {
                 Button(action: {
                     dismiss()
                 }) {
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.white)
                         .padding(10)
                         .background(Circle().fill(Color.white.opacity(0.12)))
@@ -122,7 +122,7 @@ struct FullPlayerView: View {
                             FavoritesManager.shared.toggleFavorite(song: song)
                         }) {
                             Image(systemName: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.fill" : "heart")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(FavoritesManager.shared.isFavorite(songId: song.id) ? .red : .white)
                                 .padding(10)
                                 .background(Circle().fill(Color.white.opacity(0.12)))
@@ -135,7 +135,7 @@ struct FullPlayerView: View {
                         }
                     }) {
                         Image(systemName: showLyrics ? "quote.bubble.fill" : "quote.bubble")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                             .padding(10)
                             .background(Circle().fill(showLyrics ? Color.white.opacity(0.28) : Color.white.opacity(0.12)))
@@ -190,16 +190,14 @@ struct FullPlayerView: View {
                             
                             Text(line.text)
                                 .font(.system(size: isCurrent ? 28 : 22, weight: .bold, design: .rounded))
-                                .foregroundColor(isCurrent ? .white : (isPast ? .white.opacity(0.35) : .white.opacity(0.2)))
-                                .blur(radius: isCurrent ? 0 : 0.8)
+                                .foregroundColor(isCurrent ? .white : (isPast ? .white.opacity(0.4) : .white.opacity(0.2)))
+                                .blur(radius: isCurrent ? 0 : 0.6)
                                 .scaleEffect(isCurrent ? 1.04 : 0.98, anchor: .leading)
-                                .animation(.spring(response: 0.45, dampingFraction: 0.72), value: isCurrent)
+                                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isCurrent)
                                 .id(index)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        player.seek(to: Double(line.timestampMs) / 1000.0)
-                                    }
+                                    player.seek(to: Double(line.timestampMs) / 1000.0)
                                 }
                         }
                     } else if let raw = player.lyrics?.rawText {
@@ -223,9 +221,9 @@ struct FullPlayerView: View {
                 .padding(.horizontal, 32)
                 .padding(.vertical, 40)
             }
-            .onChange(of: player.currentLyricIndex) { newIndex in
+            .onReceive(player.$currentLyricIndex) { newIndex in
                 if let idx = newIndex {
-                    withAnimation(.easeInOut(duration: 0.45)) {
+                    withAnimation(.easeInOut(duration: 0.35)) {
                         proxy.scrollTo(idx, anchor: .center)
                     }
                 }
@@ -277,10 +275,10 @@ struct FullPlayerView: View {
                 }
 
                 Button(action: {
-                    player.seek(to: max(0, player.currentTime - 10))
+                    player.playPreviousTrack()
                 }) {
-                    Image(systemName: "gobackward.10")
-                        .font(.system(size: 26))
+                    Image(systemName: "backward.fill")
+                        .font(.system(size: 24))
                         .foregroundColor(.white)
                 }
 
@@ -296,10 +294,10 @@ struct FullPlayerView: View {
                 }
 
                 Button(action: {
-                    player.seek(to: min(player.duration, player.currentTime + 10))
+                    player.playNextTrack()
                 }) {
-                    Image(systemName: "goforward.10")
-                        .font(.system(size: 26))
+                    Image(systemName: "forward.fill")
+                        .font(.system(size: 24))
                         .foregroundColor(.white)
                 }
 
@@ -313,17 +311,12 @@ struct FullPlayerView: View {
             }
             .padding(.top, 8)
 
-            HStack(spacing: 16) {
-                Image(systemName: "speaker.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.4))
-                
+            // Bar AirPlay Bersih Tanpa Ikon Speaker Samping
+            HStack {
+                Spacer()
                 AirPlayButtonView()
                     .frame(width: 32, height: 32)
-
-                Image(systemName: "speaker.wave.3.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.4))
+                Spacer()
             }
             .padding(.top, 10)
         }
