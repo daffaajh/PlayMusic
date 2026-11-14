@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchView: View {
     @State private var query: String = ""
     @State private var searchResults: [Song] = []
+    @State private var suggestions: [String] = []
     @State private var isSearching: Bool = false
     @ObservedObject var player = AudioPlayerManager.shared
 
@@ -44,6 +45,9 @@ struct SearchView: View {
                         .foregroundColor(.primary)
                         .autocapitalization(.none)
                         .disableAutocorrection(true)
+                        .onChange(of: query) { newText in
+                            fetchSuggestions(for: newText)
+                        }
                         .onSubmit {
                             performSearch(q: query)
                         }
@@ -73,6 +77,40 @@ struct SearchView: View {
                     Spacer()
                     ProgressView()
                     Spacer()
+                } else if !suggestions.isEmpty && searchResults.isEmpty && !query.isEmpty {
+                    // Live Search Autocomplete Suggestions list (seperti YouTube / Apple Music)
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(suggestions, id: \.self) { item in
+                                Button(action: {
+                                    query = item
+                                    suggestions = []
+                                    performSearch(q: item)
+                                }) {
+                                    HStack(spacing: 14) {
+                                        Image(systemName: "magnifyingglass")
+                                            .font(.system(size: 15))
+                                            .foregroundColor(.secondary)
+
+                                        Text(item)
+                                            .font(.system(size: 16, weight: .regular))
+                                            .foregroundColor(.primary)
+
+                                        Spacer()
+
+                                        Image(systemName: "arrow.up.left")
+                                            .font(.system(size: 13))
+                                            .foregroundColor(.secondary.opacity(0.5))
+                                    }
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 13)
+                                }
+                                Divider()
+                                    .padding(.leading, 50)
+                            }
+                        }
+                        .padding(.bottom, 130)
+                    }
                 } else if !searchResults.isEmpty {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 4) {
@@ -136,6 +174,7 @@ struct SearchView: View {
     private func performSearch(q: String) {
         guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         isSearching = true
+        suggestions = []
         Task {
             do {
                 let songs = try await InnertubeService.shared.search(query: q)
@@ -146,6 +185,21 @@ struct SearchView: View {
             } catch {
                 await MainActor.run {
                     self.isSearching = false
+                }
+            }
+        }
+    }
+
+    private func fetchSuggestions(for text: String) {
+        guard !text.trimmingCharacters(in: .whitespaces).isEmpty else {
+            suggestions = []
+            return
+        }
+        Task {
+            let res = await InnertubeService.shared.getSearchSuggestions(query: text)
+            await MainActor.run {
+                if self.query == text && self.searchResults.isEmpty {
+                    self.suggestions = res
                 }
             }
         }

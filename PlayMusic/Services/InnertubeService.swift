@@ -49,8 +49,35 @@ final class InnertubeService {
         return json
     }
     
-    func getTrending() async throws -> [Song] {
-        return try await search(query: "Top Indonesian and Global Hits")
+    func getSearchSuggestions(query: String) async -> [String] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        do {
+            let json = try await post(endpoint: "music/get_search_suggestions", body: [
+                "input": query
+            ])
+            
+            var suggestions: [String] = []
+            if let contents = json["contents"] as? [[String: Any]] {
+                for section in contents {
+                    if let secRenderer = section["searchSuggestionsSectionRenderer"] as? [String: Any],
+                       let items = secRenderer["contents"] as? [[String: Any]] {
+                        for item in items {
+                            if let suggestionRenderer = item["searchSuggestionRenderer"] as? [String: Any],
+                               let suggestion = suggestionRenderer["suggestion"] as? [String: Any],
+                               let runs = suggestion["runs"] as? [[String: Any]] {
+                                let text = runs.compactMap { $0["text"] as? String }.joined()
+                                if !text.isEmpty {
+                                    suggestions.append(text)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return suggestions
+        } catch {
+            return []
+        }
     }
 
     func search(query: String) async throws -> [Song] {
