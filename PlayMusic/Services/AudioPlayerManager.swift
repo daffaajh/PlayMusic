@@ -22,14 +22,39 @@ final class AudioPlayerManager: ObservableObject {
     @Published var repeatMode: RepeatMode = .off
     @Published var isShuffle: Bool = false
     
+    // Crossfade & Automix State
+    @Published var crossfadeDuration: Double = 4.0 // 0 to 12 seconds
+    @Published var isAutomixEnabled: Bool = true
+    
     private var originalQueue: [Song] = []
-    private var player: AVPlayer?
+    private var activePlayer: AVPlayer?
+    private var secondaryPlayer: AVPlayer?
+    private var isUsingPrimaryPlayer: Bool = true
+    
     private var timeObserver: Any?
-    private var endObserver: Any?
+    private var isTransitioning: Bool = false
     
     init() {
         setupAudioSession()
         setupRemoteCommandCenter()
+        
+        let savedCrossfade = UserDefaults.standard.double(forKey: "crossfade_seconds")
+        if savedCrossfade > 0 {
+            self.crossfadeDuration = savedCrossfade
+        }
+        if UserDefaults.standard.object(forKey: "automix_enabled") != nil {
+            self.isAutomixEnabled = UserDefaults.standard.bool(forKey: "automix_enabled")
+        }
+    }
+
+    func setCrossfade(seconds: Double) {
+        crossfadeDuration = seconds
+        UserDefaults.standard.set(seconds, forKey: "crossfade_seconds")
+    }
+
+    func toggleAutomix() {
+        isAutomixEnabled.toggle()
+        UserDefaults.standard.set(isAutomixEnabled, forKey: "automix_enabled")
     }
 
     func addToQueue(_ song: Song) {
@@ -100,13 +125,13 @@ final class AudioPlayerManager: ObservableObject {
             
             switch type {
             case .began:
-                self.player?.pause()
+                self.activePlayer?.pause()
                 self.isPlaying = false
             case .ended:
                 if let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt {
                     let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
                     if options.contains(.shouldResume) {
-                        self.player?.play()
+                        self.activePlayer?.play()
                         self.isPlaying = true
                     }
                 }
@@ -147,49 +172,103 @@ final class AudioPlayerManager: ObservableObject {
         }
     }
     
-    private func startPlayback(url: URL, song: Song) {
+    private func startPlayback(url: URL, song: Song, isCrossfadeTransition: Bool = false) {
         if let observer = timeObserver {
-            player?.removeTimeObserver(observer)
+            activePlayer?.removeTimeObserver(observer)
             timeObserver = nil
         }
-        if let observer = endObserver {
-            NotificationCenter.default.removeObserver(observer)
-            endObserver = nil
-        }
         
-        let item = AVPlayerItem(url: url)
-        if player == nil {
-            player = AVPlayer(playerItem: item)
+        let newItem = AVPlayerItem(url: url)
+        let nextPlayer = AVPlayer(playerItem: newItem)
+        
+        if isCrossfadeTransition && crossfadeDuration > 0, let currentPlayer = activePlayer {
+            // Dual-player smooth Crossfade ramp
+            nextPlayer.volume = 0.0
+            nextPlayer.play()
+            
+            let steps = 20
+            let interval = crossfadeDuration / Double(steps)
+            
+            for step in 1...steps {
+                let progress = Double(step) / Double(steps)
+                DispatchQueue.main.asyncAfter(deadline: .now() + (interval * Double(step))) { [weak currentPlayer, weak nextPlayer] in
+                    currentPlayer?.volume = Float(1.0 - progress)
+                    nextPlayer?.volume = Float(progress)
+                    
+                    if step == steps {
+                        currentPlayer?.pause()
+                    }
+                }
+            }
+            
+            activePlayer = nextPlayer
         } else {
-            player?.replaceCurrentItem(with: item)
+            activePlayer?.pause()
+            nextPlayer.volume = 1.0
+            nextPlayer.play()
+            activePlayer = nextPlayer
         }
         
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: item,
-            queue: .main
-        ) { [weak self] _ in
-            self?.playNextInQueue()
-        }
+        isTransitioning = false
         
         let interval = CMTime(seconds: 0.25, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
-        timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+        timeObserver = activePlayer?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             guard let self = self else { return }
             self.currentTime = time.seconds
-            if let dur = self.player?.currentItem?.duration.seconds, !dur.isNaN && dur > 0 {
+            if let dur = self.activePlayer?.currentItem?.duration.seconds, !dur.isNaN && dur > 0 {
                 self.duration = dur
             }
             self.updateActiveLyric()
             self.updateNowPlayingCenter()
+            
+            // Automix & Crossfade Trigger: Deteksi waktu transisi sebelum outro habis
+            let remainingTime = self.duration - self.currentTime
+            let triggerThreshold = self.crossfadeDuration > 0 ? self.crossfadeDuration : 1.0
+            
+            if remainingTime <= triggerThreshold && !self.isTransitioning && !self.queue.isEmpty {
+                self.isTransitioning = true
+                self.triggerNextTrackWithTransition()
+            } else if remainingTime <= 0.3 && !self.isTransitioning && self.queue.isEmpty {
+                self.playNextInQueue()
+            }
         }
         
-        player?.play()
         self.isPlaying = true
         setupNowPlayingInfo(song: song)
     }
+
+    private func triggerNextTrackWithTransition() {
+        guard !queue.isEmpty else { return }
+        let nextSong = queue.removeFirst()
+        self.currentSong = nextSong
+        self.lyrics = nil
+        self.currentLyricIndex = nil
+        
+        if let localURL = AudioCacheService.shared.cachedFileURL(for: nextSong.id) {
+            startPlayback(url: localURL, song: nextSong, isCrossfadeTransition: true)
+            Task {
+                self.lyrics = await LyricsService.shared.fetchLyrics(title: nextSong.title, artist: nextSong.artist)
+            }
+            return
+        }
+        
+        Task {
+            async let streamURLTask = InnertubeService.shared.getStreamURL(videoId: nextSong.id)
+            async let lyricsTask = LyricsService.shared.fetchLyrics(title: nextSong.title, artist: nextSong.artist)
+            
+            do {
+                let streamURL = try await streamURLTask
+                startPlayback(url: streamURL, song: nextSong, isCrossfadeTransition: true)
+                AudioCacheService.shared.saveToCache(remoteURL: streamURL, for: nextSong.id)
+            } catch {
+                print("Failed to stream next song in automix: \(error)")
+            }
+            self.lyrics = await lyricsTask
+        }
+    }
     
     func togglePlayPause() {
-        guard let player = player else { return }
+        guard let player = activePlayer else { return }
         if isPlaying {
             player.pause()
             isPlaying = false
@@ -202,7 +281,7 @@ final class AudioPlayerManager: ObservableObject {
     
     func seek(to seconds: Double) {
         let time = CMTime(seconds: seconds, preferredTimescale: 600)
-        player?.seek(to: time)
+        activePlayer?.seek(to: time)
     }
     
     private func updateActiveLyric() {
