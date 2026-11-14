@@ -95,40 +95,55 @@ struct FullPlayerView: View {
     }
 
     private var portraitLayout: some View {
-        VStack(spacing: 24) {
-            Capsule()
-                .fill(Color.white.opacity(0.3))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-
+        VStack(spacing: 20) {
+            // Top Bar: Dismiss Grabber & Back Button
             HStack {
-                if let song = player.currentSong {
-                    Button(action: {
-                        FavoritesManager.shared.toggleFavorite(song: song)
-                    }) {
-                        Image(systemName: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.fill" : "heart")
-                            .font(.system(size: 20))
-                            .foregroundColor(FavoritesManager.shared.isFavorite(songId: song.id) ? .red : .white)
-                            .padding(10)
-                            .liquidGlass(cornerRadius: 16, allowsDragPhysics: false)
-                    }
-                }
-                
-                Spacer()
-                
                 Button(action: {
-                    withAnimation(.spring()) {
-                        showLyrics.toggle()
-                    }
+                    dismiss()
                 }) {
-                    Image(systemName: showLyrics ? "quote.bubble.fill" : "quote.bubble")
-                        .font(.system(size: 20))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.white)
                         .padding(10)
-                        .liquidGlass(cornerRadius: 16, allowsDragPhysics: false)
+                        .background(Circle().fill(Color.white.opacity(0.12)))
+                }
+
+                Spacer()
+
+                Capsule()
+                    .fill(Color.white.opacity(0.35))
+                    .frame(width: 36, height: 5)
+
+                Spacer()
+
+                HStack(spacing: 12) {
+                    if let song = player.currentSong {
+                        Button(action: {
+                            FavoritesManager.shared.toggleFavorite(song: song)
+                        }) {
+                            Image(systemName: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.fill" : "heart")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(FavoritesManager.shared.isFavorite(songId: song.id) ? .red : .white)
+                                .padding(10)
+                                .background(Circle().fill(Color.white.opacity(0.12)))
+                        }
+                    }
+
+                    Button(action: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                            showLyrics.toggle()
+                        }
+                    }) {
+                        Image(systemName: showLyrics ? "quote.bubble.fill" : "quote.bubble")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(10)
+                            .background(Circle().fill(showLyrics ? Color.white.opacity(0.28) : Color.white.opacity(0.12)))
+                    }
                 }
             }
             .padding(.horizontal, 24)
+            .padding(.top, 14)
 
             Spacer()
 

@@ -7,20 +7,21 @@ struct MainView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
-                HomeView()
-                    .tag(0)
-                
-                HomeView()
-                    .tag(1)
-                
-                LibraryView()
-                    .tag(2)
-                
-                SettingsView()
-                    .tag(3)
+            ZStack {
+                switch selectedTab {
+                case 0:
+                    HomeView()
+                case 1:
+                    SearchView()
+                case 2:
+                    LibraryView()
+                case 3:
+                    SettingsView()
+                default:
+                    HomeView()
+                }
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(spacing: 8) {
                 if player.currentSong != nil {

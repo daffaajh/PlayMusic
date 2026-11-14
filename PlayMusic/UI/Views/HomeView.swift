@@ -168,17 +168,27 @@ struct HomeView: View {
         }
     }
 
-    private func loadTrending() {
+    func loadTrending() {
         isLoadingTrending = true
         Task {
             do {
-                let songs = try await InnertubeService.shared.getTrending()
-                await MainActor.run {
-                    self.trendingSongs = songs
-                    self.isLoadingTrending = false
+                // Algoritma rekomendasi multi-query untuk feed yang kaya
+                async let indoHits = InnertubeService.shared.search(query: "Lagu Pop Indonesia Terpopuler 2024")
+                async let globalHits = InnertubeService.shared.search(query: "Top Global Hits Billboard")
+                
+                let (indo, global) = await (try? indoHits, try? globalHits)
+                var combined: [Song] = []
+                var seen = Set<String>()
+                
+                for s in (indo ?? []) + (global ?? []) {
+                    if !seen.contains(s.id) {
+                        seen.insert(s.id)
+                        combined.append(s)
+                    }
                 }
-            } catch {
+                
                 await MainActor.run {
+                    self.trendingSongs = combined
                     self.isLoadingTrending = false
                 }
             }
