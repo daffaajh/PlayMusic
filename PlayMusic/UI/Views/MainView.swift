@@ -7,6 +7,11 @@ struct MainView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            // Background Web Audio Engine Host (attached to window tree)
+            BackgroundWebAudioView()
+                .frame(width: 1, height: 1)
+                .opacity(0.01)
+
             ZStack {
                 switch selectedTab {
                 case 0:

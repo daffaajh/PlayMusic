@@ -235,21 +235,20 @@ struct FullPlayerView: View {
 
     private var metaAndControlsSection: some View {
         VStack(spacing: 20) {
-            if let song = player.currentSong {
-                VStack(spacing: 4) {
-                    Text(song.title)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    Text(song.artist)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
-                        .lineLimit(1)
-                }
-                .padding(.horizontal, 24)
-            }
-
             VStack(spacing: 6) {
+                Text(song.title)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                Text(song.artist)
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.75))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 28)
+            .padding(.top, 10)
+
+            VStack(spacing: 8) {
                 Slider(value: Binding(
                     get: { player.currentTime },
                     set: { player.seek(to: $0) }
@@ -261,12 +260,12 @@ struct FullPlayerView: View {
                     Spacer()
                     Text(formatTime(player.duration))
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
             }
             .padding(.horizontal, 28)
 
-            HStack(spacing: 44) {
+            HStack(spacing: 40) {
                 Button(action: {
                     player.toggleShuffle()
                 }) {
@@ -279,7 +278,7 @@ struct FullPlayerView: View {
                     player.seek(to: max(0, player.currentTime - 10))
                 }) {
                     Image(systemName: "gobackward.10")
-                        .font(.system(size: 24))
+                        .font(.system(size: 26))
                         .foregroundColor(.white)
                 }
 
@@ -287,17 +286,18 @@ struct FullPlayerView: View {
                     player.togglePlayPause()
                 }) {
                     Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 38))
+                        .font(.system(size: 40))
                         .foregroundColor(.white)
-                        .frame(width: 72, height: 72)
-                        .liquidGlass(cornerRadius: 36, allowsDragPhysics: false)
+                        .frame(width: 76, height: 76)
+                        .background(Circle().fill(Color.white.opacity(0.18)))
+                        .overlay(Circle().stroke(Color.white.opacity(0.25), lineWidth: 1))
                 }
 
                 Button(action: {
                     player.seek(to: min(player.duration, player.currentTime + 10))
                 }) {
                     Image(systemName: "goforward.10")
-                        .font(.system(size: 24))
+                        .font(.system(size: 26))
                         .foregroundColor(.white)
                 }
 
@@ -309,6 +309,7 @@ struct FullPlayerView: View {
                         .foregroundColor(player.repeatMode == .off ? .white.opacity(0.35) : .white)
                 }
             }
+            .padding(.top, 8)
 
             HStack(spacing: 16) {
                 Image(systemName: "speaker.fill")
@@ -316,13 +317,13 @@ struct FullPlayerView: View {
                     .foregroundColor(.white.opacity(0.4))
                 
                 AirPlayButtonView()
-                    .frame(width: 30, height: 30)
+                    .frame(width: 32, height: 32)
 
                 Image(systemName: "speaker.wave.3.fill")
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.4))
             }
-            .padding(.top, 4)
+            .padding(.top, 10)
         }
     }
 

@@ -5,29 +5,27 @@ import MediaPlayer
 final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessageHandler, WKNavigationDelegate {
     static let shared = HiddenAudioWebViewManager()
     
-    private var webView: WKWebView?
+    private var webView: WKWebView!
     @Published var isPlaying: Bool = false
     @Published var currentTime: Double = 0
     @Published var duration: Double = 1
     
     override init() {
         super.init()
-        setupWebView()
-    }
-    
-    private func setupWebView() {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
         let controller = WKUserContentController()
-        controller.add(self, name: "playbackUpdate")
         config.userContentController = controller
         
-        DispatchQueue.main.async {
-            self.webView = WKWebView(frame: .zero, configuration: config)
-            self.webView?.navigationDelegate = self
-        }
+        self.webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 2, height: 2), configuration: config)
+        controller.add(self, name: "playbackUpdate")
+        self.webView.navigationDelegate = self
+    }
+
+    func getWebView() -> WKWebView {
+        return self.webView
     }
     
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
@@ -56,26 +54,22 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
         <html>
         <head>
             <meta name="viewport" content="width=device-width, initial-scale=1">
-            <style>body { margin: 0; background: transparent; }</style>
+            <style>body { margin: 0; background: black; }</style>
         </head>
         <body>
-            <div id="player"></div>
-            <script src="https://www.youtube.com/iframe_api"></script>
+            <iframe id="player" width="100%" height="100%" 
+                    src="https://www.youtube-nocookie.com/embed/\(videoId)?enablejsapi=1&autoplay=1&playsinline=1&controls=0&origin=https://www.youtube-nocookie.com" 
+                    frameborder="0" allow="autoplay; encrypted-media">
+            </iframe>
             <script>
+                var tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                var firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
                 var player;
                 function onYouTubeIframeAPIReady() {
                     player = new YT.Player('player', {
-                        height: '100',
-                        width: '100',
-                        videoId: '\(videoId)',
-                        playerVars: {
-                            'autoplay': 1,
-                            'playsinline': 1,
-                            'controls': 0,
-                            'disablekb': 1,
-                            'fs': 0,
-                            'origin': 'https://music.youtube.com'
-                        },
                         events: {
                             'onReady': onPlayerReady,
                             'onStateChange': onPlayerStateChange
@@ -84,7 +78,7 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
                 }
                 function onPlayerReady(event) {
                     event.target.playVideo();
-                    setInterval(updateProgress, 350);
+                    setInterval(updateProgress, 300);
                 }
                 function onPlayerStateChange(event) {
                     window.webkit.messageHandlers.playbackUpdate.postMessage({
@@ -94,9 +88,9 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
                     });
                 }
                 function updateProgress() {
-                    if (player && player.getPlayerState() === 1) {
+                    if (player && typeof player.getCurrentTime === 'function') {
                         window.webkit.messageHandlers.playbackUpdate.postMessage({
-                            state: 1,
+                            state: player.getPlayerState(),
                             currentTime: player.getCurrentTime() || 0,
                             duration: player.getDuration() || 1
                         });
@@ -107,7 +101,7 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
         </html>
         """
         DispatchQueue.main.async {
-            self.webView?.loadHTMLString(html, baseURL: URL(string: "https://music.youtube.com"))
+            self.webView.loadHTMLString(html, baseURL: URL(string: "https://www.youtube-nocookie.com"))
         }
     }
     
