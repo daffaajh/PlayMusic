@@ -182,18 +182,22 @@ final class AudioPlayerManager: ObservableObject {
         let nextPlayer = AVPlayer(playerItem: newItem)
         
         if isCrossfadeTransition && crossfadeDuration > 0, let currentPlayer = activePlayer {
-            // Dual-player smooth Crossfade ramp
+            // Apple Music Automix: Curve EQ beat-matching fade (Equal-Power Crossfade)
+            // Menggunakan fungsi sinus/kosinus agar energi suara konstan, tidak drop di tengah transisi
             nextPlayer.volume = 0.0
             nextPlayer.play()
             
-            let steps = 20
+            let steps = 30
             let interval = crossfadeDuration / Double(steps)
             
             for step in 1...steps {
-                let progress = Double(step) / Double(steps)
+                let t = Double(step) / Double(steps) // 0.0 -> 1.0
+                let outVol = Float(cos(t * .pi / 2)) // Equal power out
+                let inVol = Float(sin(t * .pi / 2))  // Equal power in
+                
                 DispatchQueue.main.asyncAfter(deadline: .now() + (interval * Double(step))) { [weak currentPlayer, weak nextPlayer] in
-                    currentPlayer?.volume = Float(1.0 - progress)
-                    nextPlayer?.volume = Float(progress)
+                    currentPlayer?.volume = outVol
+                    nextPlayer?.volume = inVol
                     
                     if step == steps {
                         currentPlayer?.pause()
@@ -221,9 +225,9 @@ final class AudioPlayerManager: ObservableObject {
             self.updateActiveLyric()
             self.updateNowPlayingCenter()
             
-            // Automix & Crossfade Trigger: Deteksi waktu transisi sebelum outro habis
+            // Automix Trigger
             let remainingTime = self.duration - self.currentTime
-            let triggerThreshold = self.crossfadeDuration > 0 ? self.crossfadeDuration : 1.0
+            let triggerThreshold = self.crossfadeDuration > 0 ? self.crossfadeDuration : 0.8
             
             if remainingTime <= triggerThreshold && !self.isTransitioning && !self.queue.isEmpty {
                 self.isTransitioning = true

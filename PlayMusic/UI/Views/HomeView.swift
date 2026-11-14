@@ -1,30 +1,27 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var searchQuery: String = ""
-    @State private var searchResults: [Song] = []
     @State private var trendingSongs: [Song] = []
-    @State private var isSearching: Bool = false
     @State private var isLoadingTrending: Bool = true
     @State private var selectedGenre: String? = nil
     @ObservedObject var player = AudioPlayerManager.shared
 
-    let genres = ["All", "Pop", "Indie", "Rock", "R&B", "Acoustic", "Jazz", "Electronic"]
+    let genres = ["Semua", "Pop", "Indie", "Rock", "R&B", "Akustik", "Lofi", "Elektronik"]
 
     var body: some View {
         ZStack {
             Color(UIColor.systemBackground).ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top Header: Sleek, high-contrast, pure native
-                HStack(alignment: .lastTextBaseline) {
+                // Sleek Header
+                HStack(alignment: .center) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("LIBRARY")
+                        Text("BERANDA")
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundColor(.secondary)
-                            .tracking(1.5)
-                        Text("PlayMusic")
-                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .tracking(1.4)
+                        Text("Dengarkan Sekarang")
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
                     }
                     Spacer()
@@ -33,57 +30,17 @@ struct HomeView: View {
                 .padding(.top, 14)
                 .padding(.bottom, 12)
 
-                // Search Bar: Minimalist pill with crisp border & glass backdrop
-                HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    TextField("Lagu, artis, atau album...", text: $searchQuery)
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.primary)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .onSubmit {
-                            performSearch(query: searchQuery)
-                        }
-                    
-                    if !searchQuery.isEmpty {
-                        Button(action: {
-                            searchQuery = ""
-                            searchResults = []
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color(UIColor.secondarySystemBackground))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.primary.opacity(0.06), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
-
-                // Genre Filter Chips: Apple Music style pills
+                // Genre Filter Chips
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(genres, id: \.self) { genre in
-                            let isCurrent = (selectedGenre == genre) || (selectedGenre == nil && genre == "All")
+                            let isCurrent = (selectedGenre == genre) || (selectedGenre == nil && genre == "Semua")
                             Button(action: {
-                                selectedGenre = genre == "All" ? nil : genre
+                                selectedGenre = genre == "Semua" ? nil : genre
                                 if let g = selectedGenre {
-                                    performSearch(query: "\(g) hits")
+                                    loadGenre(g)
                                 } else {
-                                    searchQuery = ""
-                                    searchResults = []
+                                    loadTrending()
                                 }
                             }) {
                                 Text(genre)
@@ -101,62 +58,58 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 20)
                 }
-                .padding(.bottom, 8)
+                .padding(.bottom, 12)
 
-                // Content List
-                if isSearching || (isLoadingTrending && searchResults.isEmpty && searchQuery.isEmpty) {
+                // Song List
+                if isLoadingTrending {
                     Spacer()
                     VStack(spacing: 12) {
                         ProgressView()
                             .scaleEffect(1.1)
-                        Text("Memuat lagu...")
+                        Text("Memuat kurasi musik...")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                     Spacer()
+                } else if trendingSongs.isEmpty {
+                    Spacer()
+                    VStack(spacing: 10) {
+                        Image(systemName: "music.note.slash")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text("Belum ada lagu tersedia")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
                 } else {
-                    let displaySongs = searchQuery.isEmpty ? trendingSongs : searchResults
-
-                    if displaySongs.isEmpty {
-                        Spacer()
-                        VStack(spacing: 10) {
-                            Image(systemName: "music.note.slash")
-                                .font(.system(size: 40))
-                                .foregroundColor(.secondary.opacity(0.5))
-                            Text("Tidak ada lagu ditemukan")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                    } else {
-                        ScrollView(showsIndicators: false) {
-                            LazyVStack(spacing: 4) {
-                                HStack {
-                                    Text(searchQuery.isEmpty ? "Rekomendasi Teratas" : "Hasil Pencarian")
-                                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Text("\(displaySongs.count) lagu")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.top, 8)
-                                .padding(.bottom, 6)
-
-                                ForEach(displaySongs) { song in
-                                    SongRow(song: song)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture {
-                                            player.play(song: song)
-                                        }
-                                }
+                    ScrollView(showsIndicators: false) {
+                        LazyVStack(spacing: 4) {
+                            HStack {
+                                Text("Lagu Populer & Rekomendasi")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                Text("\(trendingSongs.count) lagu")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.bottom, 120) // Space for floating tab & player
+                            .padding(.horizontal, 20)
+                            .padding(.top, 4)
+                            .padding(.bottom, 6)
+
+                            ForEach(trendingSongs) { song in
+                                SongRow(song: song)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        player.play(song: song)
+                                    }
+                            }
                         }
-                        .refreshable {
-                            loadTrending()
-                        }
+                        .padding(.bottom, 130)
+                    }
+                    .refreshable {
+                        loadTrending()
                     }
                 }
             }
@@ -164,6 +117,23 @@ struct HomeView: View {
         .onAppear {
             if trendingSongs.isEmpty {
                 loadTrending()
+            }
+        }
+    }
+
+    private func loadGenre(_ g: String) {
+        isLoadingTrending = true
+        Task {
+            do {
+                let songs = try await InnertubeService.shared.search(query: "\(g) music indonesia hits")
+                await MainActor.run {
+                    self.trendingSongs = songs
+                    self.isLoadingTrending = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingTrending = false
+                }
             }
         }
     }
