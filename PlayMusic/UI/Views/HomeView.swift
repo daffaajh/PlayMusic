@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var trendingSongs: [Song] = []
+    @State private var popularPlaylists: [Song] = []
     @State private var isLoadingTrending: Bool = true
     @State private var selectedGenre: String? = nil
     @ObservedObject var player = AudioPlayerManager.shared
@@ -59,7 +60,7 @@ struct HomeView: View {
                 }
                 .padding(.bottom, 12)
 
-                // Song List
+                // Content
                 if isLoadingTrending {
                     Spacer()
                     VStack(spacing: 12) {
@@ -70,39 +71,77 @@ struct HomeView: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
-                } else if trendingSongs.isEmpty {
-                    Spacer()
-                    VStack(spacing: 10) {
-                        Image(systemName: "music.note.slash")
-                            .font(.system(size: 40))
-                            .foregroundColor(.secondary.opacity(0.5))
-                        Text("Belum ada lagu tersedia")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 4) {
-                            HStack {
-                                Text("Lagu Populer & Rekomendasi")
-                                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                Text("\(trendingSongs.count) lagu")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.top, 4)
-                            .padding(.bottom, 6)
+                        VStack(alignment: .leading, spacing: 24) {
+                            // Section 1: Tangga Lagu & Playlist Populer (Horizontal Carousel Card)
+                            if !popularPlaylists.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Tangga Lagu & Playlist Pilihan")
+                                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 20)
 
-                            ForEach(trendingSongs) { song in
-                                SongRow(song: song)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        player.play(song: song)
+                                    ScrollView(.horizontal, showsIndicators: false) {
+                                        HStack(spacing: 14) {
+                                            ForEach(popularPlaylists) { item in
+                                                Button(action: {
+                                                    player.play(song: item)
+                                                }) {
+                                                    VStack(alignment: .leading, spacing: 8) {
+                                                        AsyncImage(url: item.highResThumbnail) { phase in
+                                                            if let image = phase.image {
+                                                                image.resizable().scaledToFill()
+                                                            } else {
+                                                                Color.secondary.opacity(0.15)
+                                                            }
+                                                        }
+                                                        .frame(width: 140, height: 140)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 4)
+
+                                                        VStack(alignment: .leading, spacing: 2) {
+                                                            Text(item.title)
+                                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                                .foregroundColor(.primary)
+                                                                .lineLimit(1)
+                                                            Text(item.artist)
+                                                                .font(.system(size: 12))
+                                                                .foregroundColor(.secondary)
+                                                                .lineLimit(1)
+                                                        }
+                                                        .frame(width: 140, alignment: .leading)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .padding(.horizontal, 20)
                                     }
+                                }
+                            }
+
+                            // Section 2: Rekomendasi Teratas (Vertical List)
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Rekomendasi Teratas")
+                                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text("\(trendingSongs.count) lagu")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 20)
+
+                                LazyVStack(spacing: 4) {
+                                    ForEach(trendingSongs) { song in
+                                        SongRow(song: song)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                player.play(song: song)
+                                            }
+                                    }
+                                }
                             }
                         }
                         .padding(.bottom, 130)
@@ -120,32 +159,16 @@ struct HomeView: View {
         }
     }
 
-    private func loadGenre(_ g: String) {
+    private func loadTrending() {
         isLoadingTrending = true
         Task {
             do {
-                let songs = try await InnertubeService.shared.search(query: "\(g) music indonesia hits")
-                await MainActor.run {
-                    self.trendingSongs = songs
-                    self.isLoadingTrending = false
-                }
-            } catch {
-                await MainActor.run {
-                    self.isLoadingTrending = false
-                }
-            }
-        }
-    }
+                async let indoHits = InnertubeService.shared.search(query: "Top Hits Indonesia 2024")
+                async let globalHits = InnertubeService.shared.search(query: "Billboard Hot 100")
+                async let playlists = InnertubeService.shared.search(query: "Lagu Viral TikTok Indonesia")
 
-    func loadTrending() {
-        isLoadingTrending = true
-        Task {
-            do {
-                // Algoritma rekomendasi multi-query untuk feed yang kaya
-                async let indoHits = InnertubeService.shared.search(query: "Lagu Pop Indonesia Terpopuler 2024")
-                async let globalHits = InnertubeService.shared.search(query: "Top Global Hits Billboard")
+                let (indo, global, playListRes) = await (try? indoHits, try? globalHits, try? playlists)
                 
-                let (indo, global) = await (try? indoHits, try? globalHits)
                 var combined: [Song] = []
                 var seen = Set<String>()
                 
@@ -158,6 +181,24 @@ struct HomeView: View {
                 
                 await MainActor.run {
                     self.trendingSongs = combined
+                    self.popularPlaylists = playListRes ?? []
+                    self.isLoadingTrending = false
+                }
+            }
+        }
+    }
+
+    private func loadGenre(_ g: String) {
+        isLoadingTrending = true
+        Task {
+            do {
+                let songs = try await InnertubeService.shared.search(query: "\(g) music indonesia hits")
+                await MainActor.run {
+                    self.trendingSongs = songs
+                    self.isLoadingTrending = false
+                }
+            } catch {
+                await MainActor.run {
                     self.isLoadingTrending = false
                 }
             }

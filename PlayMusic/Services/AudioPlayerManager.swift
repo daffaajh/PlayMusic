@@ -148,28 +148,27 @@ final class AudioPlayerManager: ObservableObject {
         self.lyrics = nil
         self.currentLyricIndex = nil
         
-        if let localURL = AudioCacheService.shared.cachedFileURL(for: song.id) {
-            startPlayback(url: localURL, song: song)
-            Task {
-                self.lyrics = await LyricsService.shared.fetchLyrics(title: song.title, artist: song.artist)
-            }
-            return
-        }
+        // Putar audio melalui WebKit IFrame engine (100% anti 403 & bypass throttling)
+        HiddenAudioWebViewManager.shared.loadAndPlay(videoId: song.id)
+        self.isPlaying = true
+        setupNowPlayingInfo(song: song)
         
         Task {
-            async let streamURLTask = InnertubeService.shared.getStreamURL(videoId: song.id)
-            async let lyricsTask = LyricsService.shared.fetchLyrics(title: song.title, artist: song.artist)
-            
-            do {
-                let streamURL = try await streamURLTask
-                startPlayback(url: streamURL, song: song)
-                AudioCacheService.shared.saveToCache(remoteURL: streamURL, for: song.id)
-            } catch {
-                print("Failed to get stream: \(error)")
-            }
-            
-            self.lyrics = await lyricsTask
+            self.lyrics = await LyricsService.shared.fetchLyrics(title: song.title, artist: song.artist)
         }
+    }
+    
+    func togglePlayPause() {
+        HiddenAudioWebViewManager.shared.togglePlayPause()
+        self.isPlaying = HiddenAudioWebViewManager.shared.isPlaying
+        updateNowPlayingCenter()
+    }
+    
+    func seek(to seconds: Double) {
+        HiddenAudioWebViewManager.shared.seek(to: seconds)
+        self.currentTime = seconds
+        updateActiveLyric()
+        updateNowPlayingCenter()
     }
     
     private func startPlayback(url: URL, song: Song, isCrossfadeTransition: Bool = false) {

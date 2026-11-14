@@ -3,7 +3,7 @@ import SwiftUI
 struct FullPlayerView: View {
     @ObservedObject var player = AudioPlayerManager.shared
     @Environment(\.dismiss) var dismiss
-    @State private var showLyrics: Bool = false
+    @State private var showLyrics: Bool = true
     @Environment(\.verticalSizeClass) var verticalSizeClass
 
     var isLandscape: Bool {
