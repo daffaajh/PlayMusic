@@ -1,0 +1,3 @@
+# Direktori Pelacakan Progres (Task Tracking)
+Simpan file .txt per task aktif di sini (contoh: status_fitur_auth.txt).
+Wajib hapus atau bersihkan file task yang sudah selesai agar tidak membingungkan sesi AI berikutnya.

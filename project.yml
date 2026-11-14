@@ -1,0 +1,19 @@
+name: PlayMusic
+options:
+  bundleIdPrefix: com.dapa.playmusic
+  deploymentTarget:
+    iOS: "13.0"
+targets:
+  PlayMusic:
+    type: application
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: PlayMusic
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dapa.playmusic
+        INFOPLIST_FILE: PlayMusic/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_VERSION: "5.7"
+        ENABLE_BITCODE: NO

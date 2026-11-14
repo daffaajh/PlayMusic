@@ -1,0 +1,47 @@
+name: Build and Package IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -switch /Applications/Xcode.app/Contents/Developer
+
+      - name: Create Xcode Project via xcodegen
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Build Archive (Unsigned)
+        run: |
+          xcodebuild archive \
+            -project PlayMusic.xcodeproj \
+            -scheme PlayMusic \
+            -configuration Release \
+            -archivePath build/PlayMusic.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES
+
+      - name: Package to IPA
+        run: |
+          mkdir -p build/Payload
+          cp -r build/PlayMusic.xcarchive/Products/Applications/PlayMusic.app build/Payload/
+          cd build
+          zip -r PlayMusic.ipa Payload
+          cd ..
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PlayMusic-Unsigned-IPA
+          path: build/PlayMusic.ipa
