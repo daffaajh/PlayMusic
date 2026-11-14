@@ -46,7 +46,7 @@ struct HomeView: View {
                             }) {
                                 Text(genre)
                                     .font(.system(size: 13, weight: isCurrent ? .bold : .medium, design: .rounded))
-                                    .foregroundColor(isCurrent ? .white : .primary)
+                                    .foregroundColor(isCurrent ? Color(UIColor.systemBackground) : .primary)
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 7)
                                     .background(
@@ -71,46 +71,90 @@ struct HomeView: View {
                             .foregroundColor(.secondary)
                     }
                     Spacer()
+                } else if trendingSongs.isEmpty && popularPlaylists.isEmpty {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 44))
+                            .foregroundColor(.secondary)
+                        Text("Tidak Ada Koneksi Internet")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("Periksa jaringan internet atau putar lagu yang telah disimpan di tab Koleksi.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+
+                        Button(action: {
+                            loadTrending()
+                        }) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("Coba Lagi")
+                            }
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 10)
+                            .background(Capsule().fill(Color.blue))
+                        }
+                    }
+                    Spacer()
                 } else {
                     ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 24) {
+                        VStack(alignment: .leading, spacing: 26) {
                             // Section 1: Tangga Lagu & Playlist Populer (Horizontal Carousel Card)
                             if !popularPlaylists.isEmpty {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text("Tangga Lagu & Playlist Pilihan")
-                                        .font(.system(size: 19, weight: .bold, design: .rounded))
-                                        .foregroundColor(.primary)
-                                        .padding(.horizontal, 20)
+                                VStack(alignment: .leading, spacing: 14) {
+                                    HStack {
+                                        Text("Tangga Lagu & Playlist Pilihan")
+                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(.horizontal, 20)
 
                                     ScrollView(.horizontal, showsIndicators: false) {
-                                        HStack(spacing: 14) {
+                                        HStack(spacing: 16) {
                                             ForEach(popularPlaylists) { item in
                                                 Button(action: {
                                                     player.play(song: item)
                                                 }) {
                                                     VStack(alignment: .leading, spacing: 8) {
-                                                        AsyncImage(url: item.highResThumbnail) { phase in
-                                                            if let image = phase.image {
-                                                                image.resizable().scaledToFill()
-                                                            } else {
-                                                                Color.secondary.opacity(0.15)
+                                                        ZStack(alignment: .bottomTrailing) {
+                                                            AsyncImage(url: item.highResThumbnail) { phase in
+                                                                if let image = phase.image {
+                                                                    image.resizable().scaledToFill()
+                                                                } else {
+                                                                    Color.secondary.opacity(0.15)
+                                                                }
                                                             }
+                                                            .frame(width: 145, height: 145)
+                                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                                            .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 5)
+
+                                                            Image(systemName: "play.circle.fill")
+                                                                .font(.system(size: 28))
+                                                                .foregroundColor(.white)
+                                                                .shadow(radius: 4)
+                                                                .padding(8)
                                                         }
-                                                        .frame(width: 140, height: 140)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                                        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 4)
 
                                                         VStack(alignment: .leading, spacing: 2) {
                                                             Text(item.title)
-                                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                                                .font(.system(size: 14, weight: .bold, design: .rounded))
                                                                 .foregroundColor(.primary)
                                                                 .lineLimit(1)
                                                             Text(item.artist)
-                                                                .font(.system(size: 12))
+                                                                .font(.system(size: 12, weight: .medium))
                                                                 .foregroundColor(.secondary)
                                                                 .lineLimit(1)
                                                         }
-                                                        .frame(width: 140, alignment: .leading)
+                                                        .frame(width: 145, alignment: .leading)
                                                     }
                                                 }
                                             }
@@ -120,11 +164,11 @@ struct HomeView: View {
                                 }
                             }
 
-                            // Section 2: Rekomendasi Teratas (Vertical List)
-                            VStack(alignment: .leading, spacing: 8) {
+                            // Section 2: Rekomendasi Teratas
+                            VStack(alignment: .leading, spacing: 10) {
                                 HStack {
-                                    Text("Rekomendasi Teratas")
-                                        .font(.system(size: 19, weight: .bold, design: .rounded))
+                                    Text("Lagu Rekomendasi Teratas")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
                                         .foregroundColor(.primary)
                                     Spacer()
                                     Text("\(trendingSongs.count) lagu")
@@ -133,17 +177,17 @@ struct HomeView: View {
                                 }
                                 .padding(.horizontal, 20)
 
-                                LazyVStack(spacing: 4) {
+                                LazyVStack(spacing: 6) {
                                     ForEach(trendingSongs) { song in
-                                        SongRow(song: song)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                player.play(song: song)
-                                            }
+                                        SongRow(song: song, onPlay: {
+                                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                            player.play(song: song)
+                                        })
                                     }
                                 }
                             }
                         }
+                        .padding(.top, 4)
                         .padding(.bottom, 130)
                     }
                     .refreshable {
@@ -163,9 +207,9 @@ struct HomeView: View {
         isLoadingTrending = true
         Task {
             do {
-                async let indoHits = InnertubeService.shared.search(query: "Top Hits Indonesia 2024")
+                async let indoHits = InnertubeService.shared.search(query: "Top Hits Indonesia Terbaru")
                 async let globalHits = InnertubeService.shared.search(query: "Billboard Hot 100")
-                async let playlists = InnertubeService.shared.search(query: "Lagu Viral TikTok Indonesia")
+                async let playlists = InnertubeService.shared.search(query: "Lagu Viral Populer Indonesia")
 
                 let (indo, global, playListRes) = await (try? indoHits, try? globalHits, try? playlists)
                 
@@ -208,49 +252,58 @@ struct HomeView: View {
 
 struct SongRow: View {
     let song: Song
+    var onPlay: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: song.highResThumbnail) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    ZStack {
-                        Color(UIColor.secondarySystemBackground)
-                        Image(systemName: "music.note")
-                            .font(.system(size: 16))
-                            .foregroundColor(.secondary)
+            Button(action: {
+                onPlay?()
+            }) {
+                HStack(spacing: 12) {
+                    AsyncImage(url: song.highResThumbnail) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFill()
+                        } else {
+                            ZStack {
+                                Color(UIColor.secondarySystemBackground)
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
-                }
-            }
-            .frame(width: 48, height: 48)
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(song.title)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                
-                HStack(spacing: 4) {
-                    Text(song.artist)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                    
-                    if let album = song.album {
-                        Text("•")
-                            .font(.system(size: 10))
-                            .foregroundColor(.secondary.opacity(0.6))
-                        Text(album)
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(.secondary.opacity(0.8))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(song.title)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
                             .lineLimit(1)
+                        
+                        HStack(spacing: 4) {
+                            Text(song.artist)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                            
+                            if let album = song.album {
+                                Text("•")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                Text(album)
+                                    .font(.system(size: 12, weight: .regular))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .lineLimit(1)
+                            }
+                        }
                     }
-                }
-            }
 
-            Spacer()
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
 
             Menu {
                 Button(action: {
@@ -261,6 +314,24 @@ struct SongRow: View {
                         systemImage: FavoritesManager.shared.isFavorite(songId: song.id) ? "heart.slash" : "heart"
                     )
                 }
+
+                Button(action: {
+                    if AudioCacheService.shared.isDownloaded(id: song.id) {
+                        AudioCacheService.shared.removeDownload(id: song.id)
+                    } else {
+                        Task {
+                            if let streamURL = try? await InnertubeService.shared.getStreamURL(videoId: song.id) {
+                                try? await AudioCacheService.shared.downloadExplicitly(song: song, remoteURL: streamURL)
+                            }
+                        }
+                    }
+                }) {
+                    Label(
+                        AudioCacheService.shared.isDownloaded(id: song.id) ? "Hapus Unduhan" : "Download Lagu",
+                        systemImage: AudioCacheService.shared.isDownloaded(id: song.id) ? "trash" : "arrow.down.circle"
+                    )
+                }
+
                 Button(action: {
                     AudioPlayerManager.shared.playNext(song)
                 }) {
@@ -273,9 +344,9 @@ struct SongRow: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.8))
-                    .frame(width: 36, height: 36)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
         }

@@ -1,0 +1,8 @@
+DOMAIN: Audio Engine & Networking
+ARCHITECTURE:
+- Primary Engine: AVPlayer with AVAudioSession (Category: .playback, Policy: .longFormAudio)
+- Multi-Engine Stream Resolver: Resolves YouTube video IDs to direct HTTPS m4a streams via Piped/Invidious APIs with fallback to Innertube
+- Fallback Engine: HiddenAudioWebViewManager (WKWebView IFrame API) if direct streams fail
+- Automix: Equal-Power Sin/Cos crossfade (0-12s configurable) on AVPlayer
+- Storage: AudioCacheService stores sanitized <id>.m4a in Caches/AudioTracks
+- Lock Screen: MPNowPlayingInfoCenter + MPRemoteCommandCenter wired to active engine

@@ -32,9 +32,15 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
         guard let body = message.body as? [String: Any] else { return }
         
         DispatchQueue.main.async {
-            if let evt = body["event"] as? String, evt == "ended" {
-                AudioPlayerManager.shared.playNextInQueue()
-                return
+            if let evt = body["event"] as? String {
+                if evt == "ended" {
+                    AudioPlayerManager.shared.playNextInQueue()
+                    return
+                } else if evt == "near_ended" {
+                    // Pre-fetching & visual loading cue
+                    AudioPlayerManager.shared.prepareNextTrack()
+                    return
+                }
             }
             if let state = body["state"] as? Int {
                 // 1 = playing, 2 = paused
@@ -86,7 +92,6 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
                 }
                 function onPlayerStateChange(event) {
                     if (event.data === 0) {
-                        // 0 = ENDED -> Otomatis putar lagu berikutnya di antrean
                         window.webkit.messageHandlers.playbackUpdate.postMessage({
                             event: "ended"
                         });
@@ -100,11 +105,19 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
                 }
                 function updateProgress() {
                     if (player && typeof player.getCurrentTime === 'function') {
+                        var curr = player.getCurrentTime() || 0;
+                        var dur = player.getDuration() || 1;
                         window.webkit.messageHandlers.playbackUpdate.postMessage({
                             state: player.getPlayerState(),
-                            currentTime: player.getCurrentTime() || 0,
-                            duration: player.getDuration() || 1
+                            currentTime: curr,
+                            duration: dur
                         });
+                        // Preload / buffering trigger saat sisa 2 detik
+                        if (dur > 5 && (dur - curr) <= 2.0) {
+                            window.webkit.messageHandlers.playbackUpdate.postMessage({
+                                event: "near_ended"
+                            });
+                        }
                     }
                 }
             </script>
@@ -127,5 +140,10 @@ final class HiddenAudioWebViewManager: NSObject, ObservableObject, WKScriptMessa
         webView?.evaluateJavaScript("player.seekTo(\(seconds), true);", completionHandler: nil)
         currentTime = seconds
         AudioPlayerManager.shared.currentTime = seconds
+    }
+    
+    func stop() {
+        webView?.evaluateJavaScript("if (player && typeof player.stopVideo === 'function') { player.stopVideo(); }", completionHandler: nil)
+        isPlaying = false
     }
 }

@@ -4,6 +4,7 @@ struct MainView: View {
     @State private var selectedTab: Int = 0
     @State private var showFullPlayer: Bool = false
     @ObservedObject var player = AudioPlayerManager.shared
+    @ObservedObject var themeManager = ThemeManager.shared
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -40,6 +41,7 @@ struct MainView: View {
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .sheet(isPresented: $showFullPlayer) {
             FullPlayerView()
+                .preferredColorScheme(themeManager.selectedTheme.colorScheme)
         }
     }
 

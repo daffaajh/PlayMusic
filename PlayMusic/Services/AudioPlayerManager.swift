@@ -30,6 +30,7 @@ final class AudioPlayerManager: ObservableObject {
     private var activePlayer: AVPlayer?
     private var secondaryPlayer: AVPlayer?
     private var isUsingPrimaryPlayer: Bool = true
+    private var isUsingNativePlayer: Bool = false
     
     private var timeObserver: Any?
     private var isTransitioning: Bool = false
@@ -91,8 +92,7 @@ final class AudioPlayerManager: ObservableObject {
     func playNextInQueue() {
         if repeatMode == .one, currentSong != nil {
             seek(to: 0)
-            activePlayer?.play()
-            isPlaying = true
+            HiddenAudioWebViewManager.shared.seek(to: 0)
             return
         }
         
@@ -106,6 +106,14 @@ final class AudioPlayerManager: ObservableObject {
         }
         let nextSong = queue.removeFirst()
         play(song: nextSong)
+    }
+
+    func prepareNextTrack() {
+        // Pre-fetch metadata & lirik lagu berikutnya agar instan saat transisi
+        guard let nextSong = queue.first else { return }
+        Task {
+            _ = await LyricsService.shared.fetchLyrics(title: nextSong.title, artist: nextSong.artist)
+        }
     }
     
     private func setupAudioSession() {
@@ -160,9 +168,18 @@ final class AudioPlayerManager: ObservableObject {
         self.lyrics = nil
         self.currentLyricIndex = nil
         
-        HiddenAudioWebViewManager.shared.loadAndPlay(videoId: song.id)
-        self.isPlaying = true
-        setupNowPlayingInfo(song: song)
+        // Cek jika lagu sudah tersimpan di cache lokal (prioritas AVPlayer native)
+        if let localURL = AudioCacheService.shared.cachedFileURL(for: song.id) {
+            HiddenAudioWebViewManager.shared.stop()
+            self.isUsingNativePlayer = true
+            startPlayback(url: localURL, song: song)
+        } else {
+            activePlayer?.pause()
+            self.isUsingNativePlayer = false
+            HiddenAudioWebViewManager.shared.loadAndPlay(videoId: song.id)
+            self.isPlaying = true
+            setupNowPlayingInfo(song: song)
+        }
         
         Task {
             self.lyrics = await LyricsService.shared.fetchLyrics(title: song.title, artist: song.artist)
@@ -170,19 +187,36 @@ final class AudioPlayerManager: ObservableObject {
     }
     
     func togglePlayPause() {
-        HiddenAudioWebViewManager.shared.togglePlayPause()
-        self.isPlaying = HiddenAudioWebViewManager.shared.isPlaying
+        if isUsingNativePlayer {
+            guard let player = activePlayer else { return }
+            if isPlaying {
+                player.pause()
+                isPlaying = false
+            } else {
+                player.play()
+                isPlaying = true
+            }
+        } else {
+            HiddenAudioWebViewManager.shared.togglePlayPause()
+            self.isPlaying = HiddenAudioWebViewManager.shared.isPlaying
+        }
         updateNowPlayingCenter()
     }
     
     func seek(to seconds: Double) {
-        HiddenAudioWebViewManager.shared.seek(to: seconds)
+        if isUsingNativePlayer {
+            let time = CMTime(seconds: seconds, preferredTimescale: 600)
+            activePlayer?.seek(to: time)
+        } else {
+            HiddenAudioWebViewManager.shared.seek(to: seconds)
+        }
         self.currentTime = seconds
         updateActiveLyric()
         updateNowPlayingCenter()
     }
     
     private func startPlayback(url: URL, song: Song, isCrossfadeTransition: Bool = false) {
+        self.isUsingNativePlayer = true
         if let observer = timeObserver {
             activePlayer?.removeTimeObserver(observer)
             timeObserver = nil
@@ -340,6 +374,14 @@ final class AudioPlayerManager: ObservableObject {
         }
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
             self?.togglePlayPause()
+            return .success
+        }
+        commandCenter.nextTrackCommand.addTarget { [weak self] _ in
+            self?.playNextInQueue()
+            return .success
+        }
+        commandCenter.previousTrackCommand.addTarget { [weak self] _ in
+            self?.playPreviousTrack()
             return .success
         }
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in

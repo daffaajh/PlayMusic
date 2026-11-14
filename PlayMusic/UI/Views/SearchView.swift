@@ -5,6 +5,7 @@ struct SearchView: View {
     @State private var searchResults: [Song] = []
     @State private var suggestions: [String] = []
     @State private var isSearching: Bool = false
+    @State private var suggestionTask: Task<Void, Never>? = nil
     @ObservedObject var player = AudioPlayerManager.shared
 
     let browseCategories = [
@@ -49,6 +50,7 @@ struct SearchView: View {
                             fetchSuggestions(for: newText)
                         }
                         .onSubmit {
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                             performSearch(q: query)
                         }
 
@@ -56,6 +58,7 @@ struct SearchView: View {
                         Button(action: {
                             query = ""
                             searchResults = []
+                            suggestions = []
                         }) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16))
@@ -83,6 +86,7 @@ struct SearchView: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(suggestions, id: \.self) { item in
                                 Button(action: {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                     query = item
                                     suggestions = []
                                     performSearch(q: item)
@@ -104,7 +108,9 @@ struct SearchView: View {
                                     }
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 13)
+                                    .contentShape(Rectangle())
                                 }
+                                .buttonStyle(PlainButtonStyle())
                                 Divider()
                                     .padding(.leading, 50)
                             }
@@ -115,11 +121,10 @@ struct SearchView: View {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 4) {
                             ForEach(searchResults) { song in
-                                SongRow(song: song)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        player.play(song: song)
-                                    }
+                                SongRow(song: song, onPlay: {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    player.play(song: song)
+                                })
                             }
                         }
                         .padding(.bottom, 130)
@@ -191,11 +196,14 @@ struct SearchView: View {
     }
 
     private func fetchSuggestions(for text: String) {
+        suggestionTask?.cancel()
         guard !text.trimmingCharacters(in: .whitespaces).isEmpty else {
             suggestions = []
             return
         }
-        Task {
+        suggestionTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
             let res = await InnertubeService.shared.getSearchSuggestions(query: text)
             await MainActor.run {
                 if self.query == text && self.searchResults.isEmpty {

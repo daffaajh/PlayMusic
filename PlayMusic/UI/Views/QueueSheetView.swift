@@ -45,10 +45,10 @@ struct QueueSheetView: View {
                     List {
                         ForEach(Array(player.queue.enumerated()), id: \.element.id) { index, song in
                             HStack(spacing: 12) {
-                                Text("\(index + 1)")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.secondary)
-                                    .frame(width: 20)
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary.opacity(0.6))
+                                    .frame(width: 16)
 
                                 AsyncImage(url: song.highResThumbnail) { phase in
                                     if let image = phase.image {
@@ -88,8 +88,12 @@ struct QueueSheetView: View {
                                 player.queue.remove(at: index)
                             }
                         }
+                        .onMove { indices, newOffset in
+                            player.queue.move(fromOffsets: indices, toOffset: newOffset)
+                        }
                     }
                     .listStyle(.plain)
+                    .environment(\.editMode, .constant(.active))
                 }
             }
         }

@@ -1,0 +1,13 @@
+TASK: Fix Light Theme in FullPlayerView & AirPlayButtonView
+LAST_UPDATE: 2026-11-14
+STATUS: READY_TO_TEST
+DONE:
+- Fixed Light Theme in FullPlayerView.swift: Replaced hardcoded Color.black with adaptive background (Color(UIColor.systemBackground) in Light, Color.black in Dark with soft vibrant artwork tint)
+- Adapt Dynamic Palette: Replaced hardcoded .white text, scrubber sliders, icons, and button backgrounds with dynamic primaryText, secondaryText, tertiaryText, buttonBg, and capsuleBg
+- Main Play/Pause Button: High-contrast Apple Music style (black button with white icon in Light mode; white button with black icon in Dark mode)
+- Fixed Lyrics in Light Mode: Active synced lyrics show crisp primaryText (black in Light), with faded past/future lines
+- Fixed AirPlayButtonView.swift: Dynamic tint adapting between .label (black) and .white so AirPlay button is visible on white background
+- Fixed MainView.swift: Passed preferredColorScheme(themeManager.selectedTheme.colorScheme) explicitly to FullPlayerView sheet modal
+- Verified all 21 Swift files
+NEXT_STEPS:
+- Ready to build and package IPA for ESign

@@ -9,15 +9,15 @@ struct LiquidGlassModifier: ViewModifier {
     var allowsDragPhysics: Bool = true
 
     func body(content: Content) -> some View {
-        let stretchX = 1.0 + (abs(dragOffset.width) * 0.0008) - (abs(dragOffset.height) * 0.0004)
-        let stretchY = 1.0 + (abs(dragOffset.height) * 0.0008) - (abs(dragOffset.width) * 0.0004)
+        let stretchX = 1.0 + (abs(dragOffset.width) * 0.0002) - (abs(dragOffset.height) * 0.0001)
+        let stretchY = 1.0 + (abs(dragOffset.height) * 0.0002) - (abs(dragOffset.width) * 0.0001)
         let isLight = colorScheme == .light
         
         content
             .background(
                 ZStack {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(isLight ? AnyShapeStyle(.ultraThinMaterial) : AnyShapeStyle(.ultraThinMaterial))
+                        .fill(.ultraThinMaterial)
                     
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -42,7 +42,7 @@ struct LiquidGlassModifier: ViewModifier {
                 y: isDragging ? 14 : 6
             )
             .scaleEffect(x: max(0.85, min(1.25, stretchX)), y: max(0.85, min(1.25, stretchY)))
-            .offset(x: dragOffset.width * 0.45, y: dragOffset.height * 0.45)
+            .offset(x: dragOffset.width * 0.15, y: dragOffset.height * 0.15)
             .simultaneousGesture(
                 allowsDragPhysics ?
                 DragGesture(minimumDistance: 4)
